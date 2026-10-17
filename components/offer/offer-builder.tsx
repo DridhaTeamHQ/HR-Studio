@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, type ChangeEvent } from "react"
-import { Download, FilePlus2, Loader2, Mail, Save, Upload } from "lucide-react"
+import { Download, FilePlus2, Loader2, Sheet, Mail, Save, Upload } from "lucide-react"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -16,6 +16,7 @@ import {
   saveLetters,
 } from "@/lib/offer-letter"
 import { BuilderLayout, Labeled, SavedList, Section, downloadLetterPdf, selectClass, useNotice } from "@/components/letters/shared"
+import { BulkOffers } from "./bulk-offers"
 import { OfferLetter } from "./offer-letter"
 
 export function OfferBuilder() {
@@ -23,6 +24,7 @@ export function OfferBuilder() {
   const [saved, setSaved] = useState<OfferLetterData[]>(loadSavedLetters)
   const [toast, setNotice] = useNotice()
   const [downloading, setDownloading] = useState(false)
+  const [bulkOpen, setBulkOpen] = useState(false)
 
   function set<K extends keyof OfferLetterData>(key: K, value: OfferLetterData[K]) {
     setData((d) => ({ ...d, [key]: value }))
@@ -122,10 +124,14 @@ export function OfferBuilder() {
   return (
     <>
       {toast}
+      <BulkOffers open={bulkOpen} onOpenChange={setBulkOpen} base={data} />
       <BuilderLayout
         missing={missing}
         actions={
           <>
+            <Button variant="outline" onClick={() => setBulkOpen(true)}>
+              <Sheet /> Bulk upload
+            </Button>
             <Button variant="outline" onClick={startNew}>
               <FilePlus2 /> New
             </Button>

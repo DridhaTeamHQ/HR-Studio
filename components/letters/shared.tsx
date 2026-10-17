@@ -161,22 +161,49 @@ export function SavedList<T extends { id: string }>({
  * Hidden pages (e.g. the other tab kept alive by the router) are skipped.
  */
 export async function downloadLetterPdf(fileName: string) {
-  const [{ jsPDF }, { toJpeg }] = await Promise.all([import("jspdf"), import("html-to-image")])
   const pages = [...document.querySelectorAll<HTMLElement>(".letter-page")].filter((p) => p.offsetParent !== null)
+  const pdf = await letterPdf(pages)
+  pdf.save(`${safeFileName(fileName)}.pdf`)
+}
+
+export function safeFileName(name: string) {
+  return name.replace(/[\\/:*?"<>|]+/g, "").trim()
+}
+
+/** Builds an A4 PDF Blob from the `.letter-page` elements inside `root` (used for freshly mounted letters). */
+export async function letterPdfBlob(root: HTMLElement) {
+  const pages = [...root.querySelectorAll<HTMLElement>(".letter-page")]
+  await Promise.all([...root.querySelectorAll("img")].map(loaded))
+  return (await letterPdf(pages, { warmUp: true })).output("blob")
+}
+
+function loaded(img: HTMLImageElement) {
+  if (img.complete) return Promise.resolve()
+  return new Promise<void>((resolve) => {
+    img.addEventListener("load", () => resolve(), { once: true })
+    img.addEventListener("error", () => resolve(), { once: true })
+  })
+}
+
+async function letterPdf(pages: HTMLElement[], { warmUp = false } = {}) {
+  const [{ jsPDF }, { toJpeg }] = await Promise.all([import("jspdf"), import("html-to-image")])
+  const options = {
+    pixelRatio: 2,
+    quality: 0.95,
+    backgroundColor: "#ffffff",
+    // Drop the on-screen drop shadow from the capture.
+    style: { boxShadow: "none", margin: "0" },
+    // Unfilled optional fields show a highlighted "[City]"-style hint on screen only.
+    filter: (node: HTMLElement) => !(node instanceof HTMLElement && node.dataset.placeholder !== undefined),
+  }
+  // Chrome can leave embedded images out of the very first capture of a newly mounted node; a throwaway pass fixes it.
+  if (warmUp && pages[0]) await toJpeg(pages[0], { ...options, pixelRatio: 0.25 })
 
   const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" })
   for (const [i, page] of pages.entries()) {
-    const img = await toJpeg(page, {
-      pixelRatio: 2,
-      quality: 0.95,
-      backgroundColor: "#ffffff",
-      // Drop the on-screen drop shadow from the capture.
-      style: { boxShadow: "none", margin: "0" },
-      // Unfilled optional fields show a highlighted "[City]"-style hint on screen only.
-      filter: (node) => !(node instanceof HTMLElement && node.dataset.placeholder !== undefined),
-    })
+    const img = await toJpeg(page, options)
     if (i > 0) pdf.addPage()
     pdf.addImage(img, "JPEG", 0, 0, 210, 297)
   }
-  pdf.save(`${fileName.replace(/[\\/:*?"<>|]+/g, "").trim()}.pdf`)
+  return pdf
 }
