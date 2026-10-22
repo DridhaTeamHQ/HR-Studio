@@ -2,7 +2,9 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { FileCheck2, FileSignature } from "lucide-react"
+import { FileCheck2, FileSignature, LogOut } from "lucide-react"
+import { logout } from "@/app/actions/auth"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 const TABS = [
@@ -43,6 +45,11 @@ export function StudioNav() {
           )
         })}
       </nav>
+      <form action={logout} className="ml-auto pb-3">
+        <Button type="submit" variant="ghost" size="sm">
+          <LogOut /> Log out
+        </Button>
+      </form>
     </header>
   )
 }
